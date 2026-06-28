@@ -1,0 +1,37 @@
+public class BoyerMoore {
+
+    public static int search(String text, String pattern) {
+        int tLen = text.length();
+        int pLen = pattern.length();
+
+        if (pLen == 0) return 0;
+        if (tLen < pLen) return -1;
+        int[] skip = new int[256];
+        for (int i = 0; i < 256; i++) {
+            skip[i] = pLen;
+        }
+        for (int i = 0; i < pLen - 1; i++) {
+            skip[pattern.charAt(i)] = pLen - 1 - i;
+        }
+        int i = 0;
+        while (i <= tLen - pLen) {
+            int j = pLen - 1; 
+            while (j >= 0 && pattern.charAt(j) == text.charAt(i + j)) {
+                j--;
+            }
+
+            if (j < 0) {
+                return i; 
+            }
+            i += skip[text.charAt(i + pLen - 1)];
+        }
+
+        return -1;
+    }
+
+    public static void main(String[] args) {
+        String text = "HERE IS A SIMPLE EXAMPLE";
+        String pattern = "EXAMPLE";
+        System.out.println("Found at index: " + search(text, pattern));
+    }
+}
