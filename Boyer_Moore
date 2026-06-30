@@ -1,57 +1,124 @@
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 public class BoyerMoore {
 
-    static final int NO_OF_CHARS = 256;
-
-    static void badCharHeuristic(String str, int size,
-                                 int badchar[]) {
-
-        for (int i = 0; i < NO_OF_CHARS; i++)
-            badchar[i] = -1;
-
-        for (int i = 0; i < size; i++)
-            badchar[(int) str.charAt(i)] = i;
+    // Generates the bad character shift table
+    private static Map<Character, Integer> buildBadCharTable(String pattern) {
+        Map<Character, Integer> table = new HashMap<>();
+        int m = pattern.length();
+        for (int i = 0; i < m - 1; i++) {
+            table.put(pattern.charAt(i), m - 1 - i);
+        }
+        return table;
     }
 
-    static void search(String txt, String pat) {
+    // Generates the strong good suffix shift table
+    private static int[] buildGoodSuffixTable(String pattern) {
+        int m = pattern.length();
+        int[] suff = new int[m];
+        int[] shift = new int[m + 1];
 
-        int m = pat.length();
-        int n = txt.length();
+        for (int i = 0; i <= m; i++) {
+            shift[i] = m;
+        }
 
-        int badchar[] = new int[NO_OF_CHARS];
-
-        badCharHeuristic(pat, m, badchar);
-
-        int s = 0;
-
-        while (s <= (n - m)) {
-
-            int j = m - 1;
-
-            while (j >= 0 &&
-                    pat.charAt(j) == txt.charAt(s + j))
-                j--;
-
-            if (j < 0) {
-                System.out.println(
-                        "Pattern found at index " + s);
-
-                s += (s + m < n)
-                        ? m - badchar[txt.charAt(s + m)]
-                        : 1;
+        // Compute suffix links
+        suff[m - 1] = m;
+        int g = m - 1;
+        int f = m - 1;
+        for (int i = m - 2; i >= 0; i--) {
+            if (i > g && suff[i + m - 1 - f] < i - g) {
+                suff[i] = suff[i + m - 1 - f];
             } else {
-                s += Math.max(1,
-                        j - badchar[txt.charAt(s + j)]);
+                if (i < g) {
+                    g = i;
+                }
+                f = i;
+                while (g >= 0 && pattern.charAt(g) == pattern.charAt(g + m - 1 - f)) {
+                    g--;
+                }
+                suff[i] = f - g;
             }
         }
+
+        // Case 1: Pattern contains a matching prefix
+        int j = 0;
+        for (int i = m - 1; i >= 0; i--) {
+            if (suff[i] == i + 1) {
+                while (j < m - 1 - i) {
+                    if (shift[j] == m) {
+                        shift[j] = m - 1 - i;
+                    }
+                    j++;
+                }
+            }
+        }
+
+        // Case 2: Matching suffix found inside the pattern
+        for (int i = 0; i < m - 1; i++) {
+            shift[m - 1 - suff[i]] = m - 1 - i;
+        }
+
+        return shift;
+    }
+
+    // Performs string matching using the Boyer-Moore algorithm
+    public static List<Integer> search(String text, String pattern) {
+        List<Integer> matches = new ArrayList<>();
+        int n = text.length();
+        int m = pattern.length();
+
+        if (m == 0 || n < m) {
+            return matches;
+        }
+
+        Map<Character, Integer> badChar = buildBadCharTable(pattern);
+        int[] goodSuffix = buildGoodSuffixTable(pattern);
+
+        System.out.println("Searching for pattern: '" + pattern + "'");
+        System.out.println("In text: '" + text + "'\n");
+        System.out.println("--------------------------------------------------");
+
+        int s = 0; // s is the shift of the pattern relative to the text
+        while (s <= (n - m)) {
+            int j = m - 1;
+
+            // Match from right to left
+            while (j >= 0 && pattern.charAt(j) == text.charAt(s + j)) {
+                j--;
+            }
+
+            // If the pattern matches fully at the current shift
+            if (j < 0) {
+                matches.add(s);
+                System.out.println("Pattern found at index: " + s);
+                s += goodSuffix[0];
+            } else {
+                // Apply heuristics to find the optimal shift amount
+                char charAtText = text.charAt(s + j);
+                int badCharShift = badChar.getOrDefault(charAtText, m) - (m - 1 - j);
+                badCharShift = Math.max(1, badCharShift);
+
+                int goodSuffixShift = goodSuffix[j];
+
+                s += Math.max(badCharShift, goodSuffixShift);
+            }
+        }
+
+        return matches;
     }
 
     public static void main(String[] args) {
-
-        String text =
-                "Insertion sort typically has a smaller constant factor than merge sort";
-
+        // Inputs given in the assignment question
+        String text = "Insertion sort typically has a smaller constant factor than merge sort";
         String pattern = "sort";
 
-        search(text, pattern);
+        List<Integer> result = search(text, pattern);
+        
+        System.out.println("--------------------------------------------------");
+        System.out.println("Total Occurrences Found: " + result.size() + " at indices " + result);
     }
 }
