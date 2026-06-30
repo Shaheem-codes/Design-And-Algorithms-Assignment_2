@@ -1,37 +1,57 @@
 public class BoyerMoore {
 
-    public static int search(String text, String pattern) {
-        int tLen = text.length();
-        int pLen = pattern.length();
+    static final int NO_OF_CHARS = 256;
 
-        if (pLen == 0) return 0;
-        if (tLen < pLen) return -1;
-        int[] skip = new int[256];
-        for (int i = 0; i < 256; i++) {
-            skip[i] = pLen;
-        }
-        for (int i = 0; i < pLen - 1; i++) {
-            skip[pattern.charAt(i)] = pLen - 1 - i;
-        }
-        int i = 0;
-        while (i <= tLen - pLen) {
-            int j = pLen - 1; 
-            while (j >= 0 && pattern.charAt(j) == text.charAt(i + j)) {
+    static void badCharHeuristic(String str, int size,
+                                 int badchar[]) {
+
+        for (int i = 0; i < NO_OF_CHARS; i++)
+            badchar[i] = -1;
+
+        for (int i = 0; i < size; i++)
+            badchar[(int) str.charAt(i)] = i;
+    }
+
+    static void search(String txt, String pat) {
+
+        int m = pat.length();
+        int n = txt.length();
+
+        int badchar[] = new int[NO_OF_CHARS];
+
+        badCharHeuristic(pat, m, badchar);
+
+        int s = 0;
+
+        while (s <= (n - m)) {
+
+            int j = m - 1;
+
+            while (j >= 0 &&
+                    pat.charAt(j) == txt.charAt(s + j))
                 j--;
-            }
 
             if (j < 0) {
-                return i; 
-            }
-            i += skip[text.charAt(i + pLen - 1)];
-        }
+                System.out.println(
+                        "Pattern found at index " + s);
 
-        return -1;
+                s += (s + m < n)
+                        ? m - badchar[txt.charAt(s + m)]
+                        : 1;
+            } else {
+                s += Math.max(1,
+                        j - badchar[txt.charAt(s + j)]);
+            }
+        }
     }
 
     public static void main(String[] args) {
-        String text = "HERE IS A SIMPLE EXAMPLE";
-        String pattern = "EXAMPLE";
-        System.out.println("Found at index: " + search(text, pattern));
+
+        String text =
+                "Insertion sort typically has a smaller constant factor than merge sort";
+
+        String pattern = "sort";
+
+        search(text, pattern);
     }
 }
